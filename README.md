@@ -1,36 +1,99 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Website UX Reviewer
 
-## Getting Started
+AI-powered UX review tool that analyzes website content, returns UX issues with evidence, gives a score out of 100, stores recent results, and supports side-by-side URL comparison.
 
-First, run the development server:
+## Stack
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- Next.js (App Router, full-stack)
+- Prisma + PostgreSQL
+- Playwright (page content extraction)
+- OpenAI `gpt-4o-mini`
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Features
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- Analyze one URL and generate 8-12 UX issues with evidence
+- Score the website out of 100
+- Show top 3 UX improvements
+- Compare two URLs side-by-side with score difference
+- Persist and show last 5 reviews
+- Status page for backend, database, and LLM checks
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Setup
 
-## Learn More
+1. Install dependencies:
 
-To learn more about Next.js, take a look at the following resources:
+   ```bash
+   npm install
+   ```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+2. Configure environment:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+   ```bash
+   cp .env.example .env
+   ```
 
-## Deploy on Vercel
+   Update `.env`:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+   - `DATABASE_URL="postgresql://postgres:root@localhost:5432/postgres"`
+   - `OPENAI_API_KEY="your_key_here"`
+   - `ALLOW_LLM_FALLBACK="true"` (optional: returns heuristic UX output when OpenAI quota is exceeded)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+3. Ensure PostgreSQL is running (local):
+
+   ```sql
+   -- optional if you want a separate DB
+   CREATE DATABASE ux_reviewer;
+   ```
+
+4. Generate Prisma client and migrate:
+
+   ```bash
+   npx prisma generate
+   npx prisma migrate dev --name init_review
+   ```
+
+5. Install Playwright browser binaries (first time only):
+
+   ```bash
+   npx playwright install chromium
+   ```
+
+6. Run app:
+
+   ```bash
+   npm run dev
+   ```
+
+## API Endpoints
+
+- `POST /api/analyze` → analyze one URL
+- `POST /api/compare` → analyze two URLs, return score difference
+- `GET /api/status` → service health check
+
+## Architecture
+
+User → Frontend → API Route → Playwright Extraction → LLM Review → Prisma Save → JSON Response
+
+## How LLM Works
+
+1. Playwright extracts title, headings, buttons, forms, and main text (trimmed to 4000 chars).
+2. Extracted content is sent to OpenAI using a fixed UX-auditor prompt.
+3. Model returns strict JSON with score, issues, and improvements.
+4. Response is parsed and sanitized before storage.
+
+## Limitations
+
+- Dynamic sites requiring login may not extract useful content.
+- LLM outputs may vary between requests.
+- Evidence quality depends on extracted text availability.
+- Status LLM check requires valid `OPENAI_API_KEY`.
+- If OpenAI returns `429 insufficient_quota`, analyze endpoint can return fallback output when `ALLOW_LLM_FALLBACK` is enabled.
+
+## Deployment (Railway)
+
+1. Push repository to GitHub.
+2. Create Railway project and connect repo.
+3. Set env vars in Railway:
+   - `DATABASE_URL`
+   - `OPENAI_API_KEY`
+4. Deploy.
