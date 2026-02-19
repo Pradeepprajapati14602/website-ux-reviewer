@@ -1,5 +1,4 @@
 import { prisma } from "@/lib/prisma";
-import type { Review } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
@@ -8,8 +7,10 @@ type StoredReview = {
   issues?: unknown[];
 };
 
+type ReviewRow = Awaited<ReturnType<typeof prisma.review.findMany>>[number];
+
 export default async function HistoryPage() {
-  const reviews: Review[] | null = await prisma.review
+  const reviews: ReviewRow[] | null = await prisma.review
     .findMany({
       orderBy: { createdAt: "desc" },
       take: 5,
@@ -32,7 +33,7 @@ export default async function HistoryPage() {
         <p className="text-sm opacity-80">No reviews yet. Run an analysis from Home.</p>
       ) : (
         <ul className="space-y-3">
-          {reviews.map((review: Review) => {
+          {reviews.map((review: ReviewRow) => {
             const parsed = (review.result || {}) as StoredReview;
             const issueCount = Array.isArray(parsed.issues) ? parsed.issues.length : 0;
 
