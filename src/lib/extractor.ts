@@ -1,4 +1,5 @@
 import { chromium } from "playwright";
+import type { Browser } from "playwright";
 
 const MAX_MAIN_TEXT_LENGTH = 4000;
 
@@ -19,8 +20,30 @@ function uniq(items: string[]): string[] {
   return [...new Set(items.map((item) => item.trim()).filter(Boolean))];
 }
 
+async function launchBrowser(): Promise<Browser> {
+  if (process.env.VERCEL) {
+    const [{ chromium: playwrightChromium }, { default: chromiumBinary }] = await Promise.all([
+      import("playwright-core"),
+      import("@sparticuz/chromium"),
+    ]);
+
+    const executablePath = await chromiumBinary.executablePath();
+
+    return playwrightChromium.launch({
+      args: chromiumBinary.args,
+      executablePath,
+      headless: true,
+    });
+  }
+
+  return chromium.launch({
+    headless: true,
+    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+  });
+}
+
 export async function extractWebsiteContent(url: string): Promise<ExtractedPageContent> {
-  const browser = await chromium.launch({ headless: true });
+  const browser = await launchBrowser();
   const page = await browser.newPage();
 
   try {
