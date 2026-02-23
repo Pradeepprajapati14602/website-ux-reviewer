@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 
 type Issue = {
   category: "clarity" | "layout" | "navigation" | "accessibility" | "trust";
@@ -10,10 +10,54 @@ type Issue = {
   severity: "low" | "medium" | "high";
 };
 
+type PerformanceMetric = {
+  id: string;
+  title: string;
+  description: string;
+  score: number;
+  displayValue: string;
+};
+
+type PerformanceCategory = {
+  id: string;
+  title: string;
+  score: number;
+  metrics: PerformanceMetric[];
+};
+
+type PerformanceReport = {
+  performance: PerformanceCategory;
+  accessibility: PerformanceCategory;
+  bestPractices: PerformanceCategory;
+  seo: PerformanceCategory;
+  overallPerformanceScore: number;
+  timestamp: number;
+};
+
+type AuditSection = {
+  score: number;
+  findings: Array<{
+    title: string;
+    why: string;
+    evidence: string;
+    severity: "low" | "medium" | "high";
+  }>;
+};
+
 type Review = {
   score: number;
   issues: Issue[];
   top_improvements: Array<{ before: string; after: string }>;
+  screenshots?: {
+    fullPage: string;
+    aboveTheFold: string;
+    mobile: string;
+  };
+  performance?: PerformanceReport;
+  websiteHealthScore?: number;
+  accessibility: AuditSection;
+  seo: AuditSection;
+  visual: AuditSection;
 };
 
 type AnalyzeResponse = {
@@ -30,6 +74,173 @@ type CompareResponse = {
   right?: { url: string; review: Review };
   scoreDifference?: number;
 };
+
+function HealthScoreBreakdown({ review }: { review: Review }) {
+  if (!review.performance || !review.websiteHealthScore) {
+    return null;
+  }
+
+  const { performance, websiteHealthScore } = review;
+  const breakdown = [
+    { label: "UX", score: review.score, weight: 35, color: "bg-blue-500" },
+    { label: "Performance", score: performance.overallPerformanceScore, weight: 30, color: "bg-green-500" },
+    { label: "Accessibility", score: review.accessibility.score, weight: 20, color: "bg-purple-500" },
+    { label: "SEO", score: review.seo.score, weight: 15, color: "bg-orange-500" },
+  ];
+
+  const getScoreColor = (score: number) => {
+    if (score >= 80) return "text-green-600 dark:text-green-400";
+    if (score >= 60) return "text-yellow-600 dark:text-yellow-400";
+    return "text-red-600 dark:text-red-400";
+  };
+
+  return (
+    <div className="space-y-3 rounded-lg border border-black/10 p-4 dark:border-white/15">
+      <div className="flex items-center justify-between">
+        <h4 className="font-semibold">Website Health Score</h4>
+        <div className={`text-2xl font-bold ${getScoreColor(websiteHealthScore)}`}>
+          {websiteHealthScore}/100
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        {breakdown.map((item) => (
+          <div key={item.label} className="flex items-center gap-3 text-sm">
+            <div className="w-24 font-medium">{item.label}</div>
+            <div className="flex-1 overflow-hidden rounded-full bg-black/10 dark:bg-white/10">
+              <div
+                className={`h-2 ${item.color}`}
+                style={{ width: `${item.score}%` }}
+              />
+            </div>
+            <div className="w-12 text-right">{item.score}/100</div>
+            <div className="w-10 text-xs opacity-60">{item.weight}%</div>
+          </div>
+        ))}
+      </div>
+
+      <details className="text-sm">
+        <summary className="cursor-pointer font-medium">View Performance Metrics</summary>
+        <div className="mt-3 space-y-2">
+          {performance.performance.metrics.length > 0 ? (
+            performance.performance.metrics.map((metric) => (
+              <div key={metric.id} className="rounded border border-black/10 p-2 dark:border-white/15">
+                <p className="font-medium">{metric.title}</p>
+                <p className="text-xs opacity-70">{metric.displayValue}</p>
+              </div>
+            ))
+          ) : (
+            <p className="text-xs opacity-60 italic">Performance metrics not available. PageSpeed API may have failed.</p>
+          )}
+        </div>
+      </details>
+    </div>
+  );
+}
+
+type ScoreHistoryItem = {
+  id: string;
+  url: string;
+  score: number;
+  websiteHealthScore: number | null;
+  createdAt: string;
+};
+
+function ScoreTrend({ url }: { url: string }) {
+  const [history, setHistory] = useState<ScoreHistoryItem[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!url) return;
+
+    const fetchHistory = async () => {
+      setLoading(true);
+      try {
+        const encodedUrl = encodeURIComponent(url);
+        const response = await fetch(`/api/history/${encodedUrl}?limit=30`);
+        const data = await response.json();
+        if (data.ok) {
+          setHistory(data.history);
+        }
+      } catch (error) {
+        console.error("Failed to fetch history:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchHistory();
+  }, [url]);
+
+  if (loading) {
+    return (
+      <div className="rounded-lg border border-black/10 p-4 dark:border-white/15">
+        <h4 className="mb-3 font-semibold">Score Trend (Last 30)</h4>
+        <p className="text-sm opacity-60">Loading...</p>
+      </div>
+    );
+  }
+
+  if (history.length < 2) {
+    return (
+      <div className="rounded-lg border border-black/10 p-4 dark:border-white/15">
+        <h4 className="mb-3 font-semibold">Score Trend</h4>
+        <p className="text-sm opacity-60">Run more audits to see trends</p>
+      </div>
+    );
+  }
+
+  const maxScore = 100;
+  const reversedHistory = [...history].reverse();
+
+  return (
+    <div className="rounded-lg border border-black/10 p-4 dark:border-white/15">
+      <h4 className="mb-3 font-semibold">Score Trend (Last {history.length})</h4>
+      <div className="space-y-3">
+        <div className="flex items-center gap-2 text-xs">
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+            <span>UX Score</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <div className="w-3 h-3 rounded-full bg-green-500"></div>
+            <span>Health Score</span>
+          </div>
+        </div>
+        <div className="flex items-end gap-1 h-32">
+          {reversedHistory.map((item) => {
+            const uxHeight = (item.score / maxScore) * 100;
+            const healthHeight = item.websiteHealthScore
+              ? (item.websiteHealthScore / maxScore) * 100
+              : 0;
+
+            return (
+              <div
+                key={item.id}
+                className="flex-1 flex h-full flex-col items-center gap-1 group"
+                title={`Date: ${new Date(item.createdAt).toLocaleDateString()}\nUX: ${item.score}/100\nHealth: ${item.websiteHealthScore ?? "N/A"}/100`}
+              >
+                <div className="flex h-24 w-full items-end gap-0.5">
+                  <div
+                    className="flex-1 rounded-t bg-blue-500 opacity-80"
+                    style={{ height: `${uxHeight}%` }}
+                  />
+                  <div
+                    className="flex-1 rounded-t bg-green-500 opacity-80"
+                    style={{ height: `${healthHeight}%` }}
+                  />
+                </div>
+                <span className="text-[10px] opacity-60">
+                  {new Date(item.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function ReviewCard({ label, review, url }: { label: string; review: Review; url: string }) {
   const groupedIssues = useMemo(() => {
@@ -51,6 +262,28 @@ function ReviewCard({ label, review, url }: { label: string; review: Review; url
         </div>
       </div>
       <p className="text-sm break-all opacity-80">{url}</p>
+
+      {review.screenshots && (
+        <div className="mt-4 space-y-3">
+          <h4 className="mb-2 font-semibold">Screenshots</h4>
+          <div className="grid gap-3 md:grid-cols-3">
+            <div className="space-y-1">
+              <p className="text-xs uppercase tracking-wide opacity-70">Above the Fold</p>
+              <img src={review.screenshots.aboveTheFold} alt="Above the fold screenshot" className="w-full rounded border border-black/10 dark:border-white/15" />
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs uppercase tracking-wide opacity-70">Mobile</p>
+              <img src={review.screenshots.mobile} alt="Mobile screenshot" className="w-full rounded border border-black/10 dark:border-white/15" />
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs uppercase tracking-wide opacity-70">Full Page</p>
+              <img src={review.screenshots.fullPage} alt="Full page screenshot" className="w-full rounded border border-black/10 dark:border-white/15" />
+            </div>
+          </div>
+        </div>
+      )}
+
+      <HealthScoreBreakdown review={review} />
 
       <div>
         <h4 className="mb-2 font-semibold">Issues</h4>
@@ -244,7 +477,10 @@ export default function Home() {
       </section>
 
       {singleResult?.review && singleResult.url ? (
-        <ReviewCard label="Review Result" review={singleResult.review} url={singleResult.url} />
+        <>
+          <ReviewCard label="Review Result" review={singleResult.review} url={singleResult.url} />
+          <ScoreTrend url={singleResult.url} />
+        </>
       ) : null}
 
       {compareResult?.left && compareResult?.right ? (

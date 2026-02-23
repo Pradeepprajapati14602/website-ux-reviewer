@@ -13,9 +13,25 @@ datasource db {
 }
 
 model Review {
+  id                 String   @id @default(uuid())
+  url                String
+  score              Int
+  result             Json
+  visualFullPage     String?
+  visualAboveFold    String?
+  visualMobile       String?
+  performanceReport  Json?
+  websiteHealthScore Int?
+  createdAt          DateTime @default(now())
+}
+
+model ScheduledAudit {
   id        String   @id @default(uuid())
   url       String
-  score     Int
-  result    Json
+  frequency String   // "daily" | "weekly" | "monthly"
+  active    Boolean  @default(true)
+  lastRunAt DateTime?
+  nextRunAt DateTime?
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

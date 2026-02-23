@@ -5,6 +5,12 @@ export const dynamic = "force-dynamic";
 type StoredReview = {
   score?: number;
   issues?: unknown[];
+  visual?: {
+    fullPage: string;
+    aboveTheFold: string;
+    mobile: string;
+  };
+  websiteHealthScore?: number;
 };
 
 type ReviewRow = Awaited<ReturnType<typeof prisma.review.findMany>>[number];
@@ -36,15 +42,50 @@ export default async function HistoryPage() {
           {reviews.map((review: ReviewRow) => {
             const parsed = (review.result || {}) as StoredReview;
             const issueCount = Array.isArray(parsed.issues) ? parsed.issues.length : 0;
+            const visualAssets = {
+              fullPage: review.visualFullPage || parsed.visual?.fullPage || "",
+              aboveTheFold: review.visualAboveFold || parsed.visual?.aboveTheFold || "",
+              mobile: review.visualMobile || parsed.visual?.mobile || "",
+            };
 
             return (
               <li key={review.id} className="rounded-lg border border-black/10 p-4 dark:border-white/15">
                 <p className="text-sm break-all opacity-90">{review.url}</p>
                 <div className="mt-2 flex flex-wrap gap-4 text-sm">
-                  <span className="font-medium">Score: {parsed.score ?? review.score}/100</span>
+                  <span className="font-medium">UX Score: {parsed.score ?? review.score}/100</span>
+                  {review.websiteHealthScore !== null && review.websiteHealthScore !== undefined && (
+                    <span className="font-semibold text-green-600 dark:text-green-400">
+                      Health: {review.websiteHealthScore}/100
+                    </span>
+                  )}
                   <span>Issues: {issueCount}</span>
                   <span>{new Date(review.createdAt).toLocaleString()}</span>
                 </div>
+                {visualAssets.aboveTheFold && (
+                  <details className="mt-3">
+                    <summary className="cursor-pointer text-sm font-medium">View Screenshots</summary>
+                    <div className="mt-3 grid gap-3 md:grid-cols-3">
+                      {visualAssets.aboveTheFold && (
+                        <div className="space-y-1">
+                          <p className="text-xs uppercase tracking-wide opacity-70">Above the Fold</p>
+                          <img src={visualAssets.aboveTheFold} alt="Above the fold screenshot" className="w-full rounded border border-black/10 dark:border-white/15" />
+                        </div>
+                      )}
+                      {visualAssets.mobile && (
+                        <div className="space-y-1">
+                          <p className="text-xs uppercase tracking-wide opacity-70">Mobile</p>
+                          <img src={visualAssets.mobile} alt="Mobile screenshot" className="w-full rounded border border-black/10 dark:border-white/15" />
+                        </div>
+                      )}
+                      {visualAssets.fullPage && (
+                        <div className="space-y-1">
+                          <p className="text-xs uppercase tracking-wide opacity-70">Full Page</p>
+                          <img src={visualAssets.fullPage} alt="Full page screenshot" className="w-full rounded border border-black/10 dark:border-white/15" />
+                        </div>
+                      )}
+                    </div>
+                  </details>
+                )}
               </li>
             );
           })}

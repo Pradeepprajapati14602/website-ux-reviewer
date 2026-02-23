@@ -7,13 +7,21 @@
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "vitest run",
+    "test:smoke": "npm run build && playwright test -c playwright.smoke.config.ts",
+    "test:system": "node scripts/run-system-tests.mjs",
+    "test:quick": "node scripts/run-quality-check.mjs quick",
+    "test:all": "node scripts/run-quality-check.mjs full",
+    "test:phase7": "node scripts/run-quality-check.mjs phase7",
+    "test:e2e": "node scripts/run-quality-check.mjs e2e",
     "postinstall": "prisma generate"
   },
   "dependencies": {
-    "@sparticuz/chromium": "^138.0.2",
     "@prisma/adapter-pg": "^7.4.0",
     "@prisma/client": "^7.4.0",
+    "@sparticuz/chromium": "^138.0.2",
     "next": "16.1.6",
+    "nodemailer": "^7.0.5",
     "openai": "^6.22.0",
     "pg": "^8.18.0",
     "playwright": "^1.58.2",
@@ -23,14 +31,17 @@
     "react-dom": "19.2.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
+    "@types/nodemailer": "^7.0.11",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "dotenv": "^17.3.1",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^3.2.4"
   }
 }
