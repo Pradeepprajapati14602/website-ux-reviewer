@@ -5,6 +5,9 @@ import { UX_AUDIT_PROMPT } from "@/lib/prompt";
 
 export type UXCategory = "clarity" | "layout" | "navigation" | "accessibility" | "trust";
 export type UXSeverity = "low" | "medium" | "high";
+export type ConfidenceLevel = "high" | "medium" | "low";
+export type EvidenceSource = "deterministic" | "heuristic" | "ai_inferred";
+export type PriorityLabel = "critical" | "high" | "medium" | "low" | "quick_win";
 
 export type UXIssue = {
   category: UXCategory;
@@ -12,6 +15,14 @@ export type UXIssue = {
   why: string;
   evidence: string;
   severity: UXSeverity;
+  confidence?: ConfidenceLevel;
+  evidenceWeight?: number;
+  sourceType?: EvidenceSource;
+  impactScore?: number;
+  effortScore?: number;
+  priorityScore?: number;
+  priorityLabel?: PriorityLabel;
+  fixSnippet?: string;
 };
 
 export type UXImprovement = {
@@ -24,6 +35,14 @@ export type AuditFinding = {
   why: string;
   evidence: string;
   severity: UXSeverity;
+  confidence?: ConfidenceLevel;
+  evidenceWeight?: number;
+  sourceType?: EvidenceSource;
+  impactScore?: number;
+  effortScore?: number;
+  priorityScore?: number;
+  priorityLabel?: PriorityLabel;
+  fixSnippet?: string;
 };
 
 export type AuditSection = {
@@ -47,6 +66,9 @@ export type UXReview = {
 
 const allowedCategories: UXCategory[] = ["clarity", "layout", "navigation", "accessibility", "trust"];
 const allowedSeverity: UXSeverity[] = ["low", "medium", "high"];
+const allowedConfidence: ConfidenceLevel[] = ["high", "medium", "low"];
+const allowedSourceTypes: EvidenceSource[] = ["deterministic", "heuristic", "ai_inferred"];
+const allowedPriorityLabels: PriorityLabel[] = ["critical", "high", "medium", "low", "quick_win"];
 const LLM_PROVIDER =
   process.env.LLM_PROVIDER || (process.env.GROQ_API_KEY ? "groq" : "xai");
 const LLM_BASE_URL =
@@ -66,6 +88,14 @@ const RETRYABLE_STATUS_CODES = new Set([408, 409, 429, 500, 502, 503, 504]);
 
 function clampScore(value: number): number {
   return Math.max(0, Math.min(100, Math.round(value)));
+}
+
+function toClampedScore(value: unknown, fallback: number): number {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return fallback;
+  }
+  return clampScore(parsed);
 }
 
 function toErrorMessage(error: unknown): string {
@@ -207,6 +237,9 @@ function normalizeIssue(input: unknown): UXIssue | null {
   const item = input as Record<string, unknown>;
   const category = String(item.category || "clarity").toLowerCase() as UXCategory;
   const severity = String(item.severity || "medium").toLowerCase() as UXSeverity;
+  const confidence = String(item.confidence || "medium").toLowerCase() as ConfidenceLevel;
+  const sourceType = String(item.sourceType || "ai_inferred").toLowerCase() as EvidenceSource;
+  const priorityLabel = String(item.priorityLabel || "medium").toLowerCase() as PriorityLabel;
 
   return {
     category: allowedCategories.includes(category) ? category : "clarity",
@@ -214,6 +247,14 @@ function normalizeIssue(input: unknown): UXIssue | null {
     why: String(item.why || "No explanation provided.").trim(),
     evidence: String(item.evidence || "").trim(),
     severity: allowedSeverity.includes(severity) ? severity : "medium",
+    confidence: allowedConfidence.includes(confidence) ? confidence : "medium",
+    evidenceWeight: toClampedScore(item.evidenceWeight, 50),
+    sourceType: allowedSourceTypes.includes(sourceType) ? sourceType : "ai_inferred",
+    impactScore: toClampedScore(item.impactScore, 60),
+    effortScore: toClampedScore(item.effortScore, 45),
+    priorityScore: toClampedScore(item.priorityScore, 50),
+    priorityLabel: allowedPriorityLabels.includes(priorityLabel) ? priorityLabel : "medium",
+    fixSnippet: String(item.fixSnippet || "").trim() || undefined,
   };
 }
 
@@ -224,12 +265,23 @@ function normalizeFinding(input: unknown): AuditFinding | null {
 
   const item = input as Record<string, unknown>;
   const severity = String(item.severity || "medium").toLowerCase() as UXSeverity;
+  const confidence = String(item.confidence || "medium").toLowerCase() as ConfidenceLevel;
+  const sourceType = String(item.sourceType || "ai_inferred").toLowerCase() as EvidenceSource;
+  const priorityLabel = String(item.priorityLabel || "medium").toLowerCase() as PriorityLabel;
 
   return {
     title: String(item.title || "Untitled finding").trim(),
     why: String(item.why || "No explanation provided.").trim(),
     evidence: String(item.evidence || "").trim(),
     severity: allowedSeverity.includes(severity) ? severity : "medium",
+    confidence: allowedConfidence.includes(confidence) ? confidence : "medium",
+    evidenceWeight: toClampedScore(item.evidenceWeight, 50),
+    sourceType: allowedSourceTypes.includes(sourceType) ? sourceType : "ai_inferred",
+    impactScore: toClampedScore(item.impactScore, 60),
+    effortScore: toClampedScore(item.effortScore, 45),
+    priorityScore: toClampedScore(item.priorityScore, 50),
+    priorityLabel: allowedPriorityLabels.includes(priorityLabel) ? priorityLabel : "medium",
+    fixSnippet: String(item.fixSnippet || "").trim() || undefined,
   };
 }
 

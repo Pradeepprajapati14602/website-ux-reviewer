@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -68,19 +69,19 @@ export default async function HistoryPage() {
                       {visualAssets.aboveTheFold && (
                         <div className="space-y-1">
                           <p className="text-xs uppercase tracking-wide opacity-70">Above the Fold</p>
-                          <img src={visualAssets.aboveTheFold} alt="Above the fold screenshot" className="w-full rounded border border-black/10 dark:border-white/15" />
+                          <Image src={visualAssets.aboveTheFold} alt="Above the fold screenshot" width={1200} height={675} unoptimized className="h-auto w-full rounded border border-black/10 dark:border-white/15" />
                         </div>
                       )}
                       {visualAssets.mobile && (
                         <div className="space-y-1">
                           <p className="text-xs uppercase tracking-wide opacity-70">Mobile</p>
-                          <img src={visualAssets.mobile} alt="Mobile screenshot" className="w-full rounded border border-black/10 dark:border-white/15" />
+                          <Image src={visualAssets.mobile} alt="Mobile screenshot" width={1200} height={675} unoptimized className="h-auto w-full rounded border border-black/10 dark:border-white/15" />
                         </div>
                       )}
                       {visualAssets.fullPage && (
                         <div className="space-y-1">
                           <p className="text-xs uppercase tracking-wide opacity-70">Full Page</p>
-                          <img src={visualAssets.fullPage} alt="Full page screenshot" className="w-full rounded border border-black/10 dark:border-white/15" />
+                          <Image src={visualAssets.fullPage} alt="Full page screenshot" width={1200} height={675} unoptimized className="h-auto w-full rounded border border-black/10 dark:border-white/15" />
                         </div>
                       )}
                     </div>

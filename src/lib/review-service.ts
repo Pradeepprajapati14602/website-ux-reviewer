@@ -1,5 +1,6 @@
 import { Prisma, ScheduledAudit } from "@prisma/client";
 import { runUxAudit, type UXReview } from "@/lib/analysis";
+import { buildAuditDiff, enrichReviewIntelligence, type AuditDiff } from "@/lib/audit-intelligence";
 import { extractWebsiteContent, type ExtractedPageContent } from "@/lib/extractor";
 import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
@@ -9,6 +10,9 @@ import {
   type PerformanceReport,
 } from "@/lib/performance";
 import { sendScoreDropAlert, sendAuditCompleteAlert } from "@/lib/alerts";
+import type { SEOContentAnalysis } from "@/lib/content-intelligence";
+import { correlateMotionWithPerformance, type MotionAnalysis } from "@/lib/motion-intelligence";
+import type { UXIntelligenceAnalysis } from "@/lib/ux-intelligence";
 
 const MAX_HISTORY = 100;
 
@@ -25,6 +29,10 @@ export type AnalysisResult = UXReview & {
   };
   performance: PerformanceReport;
   websiteHealthScore: number;
+  diff: AuditDiff | null;
+  seo_content_analysis: SEOContentAnalysis;
+  motion_analysis: MotionAnalysis;
+  ux_intelligence: UXIntelligenceAnalysis;
 };
 
 async function keepLastFiveReviews(): Promise<number> {
@@ -169,19 +177,43 @@ export async function analyzeAndSave(url: string, context: AnalyzeContext = {}):
     const previousReview = await prisma.review.findFirst({
       where: { url },
       orderBy: { createdAt: "desc" },
-      select: { score: true, websiteHealthScore: true },
+      select: {
+        score: true,
+        websiteHealthScore: true,
+        result: true,
+        performanceReport: true,
+        createdAt: true,
+      },
     });
 
     const extracted = await extractWebsiteContent(url);
-    const review = await runUxAudit(extracted);
+    const rawReview = await runUxAudit(extracted);
+    const review = enrichReviewIntelligence(rawReview);
 
     const performance = await getPerformanceReport(url);
+    const motionAnalysis = correlateMotionWithPerformance(extracted.motionAnalysis, performance);
 
     const websiteHealthScore = calculateWebsiteHealthScore({
       uxScore: review.score,
       performanceScore: performance.overallPerformanceScore,
       accessibilityScore: review.accessibility.score,
       seoScore: review.seo.score,
+      motionScore: Math.max(0, 100 - motionAnalysis.risk_score),
+    });
+
+    const previousParsedReview = previousReview?.result ? enrichReviewIntelligence(previousReview.result as UXReview) : null;
+    const previousPerformance = previousReview?.performanceReport ? (previousReview.performanceReport as PerformanceReport) : null;
+    const diff = buildAuditDiff({
+      previousReview: previousParsedReview,
+      currentReview: review,
+      previousScore: previousReview?.score ?? null,
+      currentScore: review.score,
+      previousHealthScore: previousReview?.websiteHealthScore ?? null,
+      currentHealthScore: websiteHealthScore,
+      previousPerformance,
+      currentPerformance: performance,
+      previousCreatedAt: previousReview?.createdAt,
+      currentCreatedAt: new Date(),
     });
 
     await prisma.review.create({
@@ -238,6 +270,10 @@ export async function analyzeAndSave(url: string, context: AnalyzeContext = {}):
       screenshots: extracted.visual,
       performance,
       websiteHealthScore,
+      diff,
+      seo_content_analysis: extracted.contentIntelligence,
+      motion_analysis: motionAnalysis,
+      ux_intelligence: extracted.uxIntelligence,
     };
   } catch (error) {
     logger.error("review.analyze.error", {

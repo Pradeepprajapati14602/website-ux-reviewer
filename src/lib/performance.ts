@@ -289,19 +289,20 @@ export function calculateWebsiteHealthScore(params: {
   performanceScore: number;
   accessibilityScore: number;
   seoScore: number;
+  motionScore?: number;
 }): number {
-  const weights = {
-    ux: 0.35,
-    performance: 0.30,
-    accessibility: 0.20,
-    seo: 0.15,
-  };
+  const hasMotion = Number.isFinite(params.motionScore);
 
-  const healthScore =
-    params.uxScore * weights.ux +
-    params.performanceScore * weights.performance +
-    params.accessibilityScore * weights.accessibility +
-    params.seoScore * weights.seo;
+  const healthScore = hasMotion
+    ? params.uxScore * 0.33 +
+      params.performanceScore * 0.28 +
+      params.accessibilityScore * 0.18 +
+      params.seoScore * 0.13 +
+      (params.motionScore || 0) * 0.08
+    : params.uxScore * 0.35 +
+      params.performanceScore * 0.30 +
+      params.accessibilityScore * 0.20 +
+      params.seoScore * 0.15;
 
   return Math.round(Math.max(0, Math.min(100, healthScore)));
 }

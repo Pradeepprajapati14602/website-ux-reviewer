@@ -16,7 +16,15 @@ Return a JSON response with:
         "title": "",
         "why": "",
         "evidence": "",
-        "severity": "low | medium | high"
+        "severity": "low | medium | high",
+        "confidence": "high | medium | low",
+        "evidenceWeight": number (0-100),
+        "sourceType": "deterministic | heuristic | ai_inferred",
+        "impactScore": number (0-100),
+        "effortScore": number (0-100),
+        "priorityScore": number (0-100),
+        "priorityLabel": "critical | high | medium | low | quick_win",
+        "fixSnippet": ""
       }
     ],
     "top_improvements": [
@@ -33,7 +41,15 @@ Return a JSON response with:
         "title": "",
         "why": "",
         "evidence": "",
-        "severity": "low | medium | high"
+        "severity": "low | medium | high",
+        "confidence": "high | medium | low",
+        "evidenceWeight": number (0-100),
+        "sourceType": "deterministic | heuristic | ai_inferred",
+        "impactScore": number (0-100),
+        "effortScore": number (0-100),
+        "priorityScore": number (0-100),
+        "priorityLabel": "critical | high | medium | low | quick_win",
+        "fixSnippet": ""
       }
     ]
   },
@@ -44,7 +60,15 @@ Return a JSON response with:
         "title": "",
         "why": "",
         "evidence": "",
-        "severity": "low | medium | high"
+        "severity": "low | medium | high",
+        "confidence": "high | medium | low",
+        "evidenceWeight": number (0-100),
+        "sourceType": "deterministic | heuristic | ai_inferred",
+        "impactScore": number (0-100),
+        "effortScore": number (0-100),
+        "priorityScore": number (0-100),
+        "priorityLabel": "critical | high | medium | low | quick_win",
+        "fixSnippet": ""
       }
     ]
   },
@@ -55,7 +79,15 @@ Return a JSON response with:
         "title": "",
         "why": "",
         "evidence": "",
-        "severity": "low | medium | high"
+        "severity": "low | medium | high",
+        "confidence": "high | medium | low",
+        "evidenceWeight": number (0-100),
+        "sourceType": "deterministic | heuristic | ai_inferred",
+        "impactScore": number (0-100),
+        "effortScore": number (0-100),
+        "priorityScore": number (0-100),
+        "priorityLabel": "critical | high | medium | low | quick_win",
+        "fixSnippet": ""
       }
     ]
   },
@@ -65,7 +97,15 @@ Return a JSON response with:
       "title": "",
       "why": "",
       "evidence": "",
-      "severity": "low | medium | high"
+      "severity": "low | medium | high",
+      "confidence": "high | medium | low",
+      "evidenceWeight": number (0-100),
+      "sourceType": "deterministic | heuristic | ai_inferred",
+      "impactScore": number (0-100),
+      "effortScore": number (0-100),
+      "priorityScore": number (0-100),
+      "priorityLabel": "critical | high | medium | low | quick_win",
+      "fixSnippet": ""
     }
   ],
   "top_improvements": [
